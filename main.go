@@ -121,6 +121,175 @@ func simple_append() {
 	fmt.Printf("a=%v b=%v", a, b)
 }
 
-func main() {
-	simple_append()
+// Will output the date but not the Hello
+// Because we embedded time.Time into the Log struct so it has all the methods and fields of time.Time
+// time.Time has a String() string method which means it implements fmt.Stringer interface. fmt.Printf will then
+// use the String() method instead of the default output
+func what_da_log_doin() {
+	type Log struct {
+		Message string
+		time.Time
+	}
+	ts := time.Date(2009, 11, 10, 0, 0, 0, 0, time.UTC)
+	log := &Log{"Hello", ts}
+	fmt.Printf("%v\n", log)
 }
+
+// Outputs 0.25
+// Because in Go this is a hexadecimal floating-point literal. To calculate the value we do
+// The value of the literal before the p which is 0x1 in hexadecimal which is 1
+// 2 to the power of the value after the p which is 2^-2 which is also 1/2^2 : 0.25
+// And we multiply the two values 1x0.25 is 0.25
+// https://go.dev/ref/spec#Lexical_elements
+func funky_number() {
+	fmt.Println(0x1p-2)
+}
+
+func fibs(n int) chan int {
+	ch := make(chan int)
+	go func() {
+		a, b := 1, 1
+		for i := 0; i < n; i++ {
+			ch <- a
+			a, b = b, a+b
+		}
+	}()
+	return ch
+}
+
+// Dont understand yet. Need to read more bout concurrency patterns in Go
+func free_range_ints() {
+	for i := range fibs(5) {
+		fmt.Printf("%d\n", i)
+	}
+}
+
+// Will output 1,3,4
+// b will be reassigned to because it is an existing variable
+func who_is_you() {
+	a, b := 1, 2
+	b, c := 3, 4
+	fmt.Println(a, b, c)
+}
+
+// Will output false
+// The two strings look the same but are not the same at the byte level
+// The first contain the special character ó but the second contains o followed by a control character
+func two_cities() {
+	city1, city2 := "Kraków", "Kraków"
+	fmt.Println(city1 == city2)
+}
+
+// Outputs 2, 0
+// We create a buffered channel of capacity 2
+// We then put 1, and 2 in the channel. Read from it and close it
+// When we try to read from a closed channel, if the channel contains a value we will receive it, if not
+// We get the 0 value of the channel type
+// Here we read once from the channel before so 1 is gone, we then read 2 into a and 0 into b because
+// the channel is empty after we read 2
+func what_is_in_chanel() {
+	ch := make(chan int, 2)
+	ch <- 1
+	ch <- 2
+	<-ch
+	close(ch)
+	a := <-ch
+	b := <-ch
+	fmt.Println(a, b)
+}
+
+// Outputs ©
+// string is the set of all strings of 8-bit bytes, conventionally but not necessarily representing UTF-8-encoded text
+// Which means that doing string(169) will output the unicode representation of 169 which is ©
+// To convert 169 into a string literal we can either use strconv.Itao or fmt.Sprintf(i)
+func int64resting() {
+	i := 169
+	// s := string(i)
+	s := fmt.Sprintf("%d", i)
+	fmt.Println(s)
+}
+
+type Job struct {
+	State string
+	done  chan struct{}
+}
+
+func (j *Job) Wait() {
+	<-j.done
+}
+
+func (j *Job) Done() {
+	j.State = "done"
+	close(j.done)
+}
+
+// Dont understand well concurrency patterns in Go
+// Skill issue ;)
+func job() {
+	ch := make(chan Job)
+	go func() {
+		j := <-ch
+		j.Done()
+	}()
+	job := Job{"ready", make(chan struct{})}
+	ch <- job
+	job.Wait()
+	fmt.Println(job.State)
+}
+
+type OSError int
+
+func (e *OSError) Error() string {
+	return fmt.Sprintf("error #%d", *e)
+}
+
+func FilePathExists(path string) (bool, error) {
+	var err *OSError
+	return false, err
+}
+
+// Outputs error: nil
+// Dont understand well
+// Need to read more
+func err_or_not_err() {
+	if _, err := FilePathExists("/no/such/file"); err != nil {
+		fmt.Printf("error: %s\n", err)
+	} else {
+		fmt.Println("OK")
+	}
+}
+
+func what_in_da_string() {
+	msg := "π = 3.14159265358..."
+	fmt.Printf("%T ", msg[0])
+	for _, c := range msg {
+		fmt.Printf("%T\n", c)
+		break
+	}
+}
+
+func init() {
+	fmt.Println("A")
+}
+
+func init() {
+	fmt.Println("B")
+}
+
+func count_me_in() {
+	var count int
+	var wg sync.WaitGroup
+	for i := 0; i < 1_000_000; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			count++
+		}()
+	}
+	wg.Wait()
+	fmt.Println(count)
+}
+
+// func main() {
+// 	count_me_in()
+// }
